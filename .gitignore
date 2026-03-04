@@ -5,5 +5,5 @@ __pycache__/
 .ruff_cache/
 *.pyc
 art_modern-log.d/
-FOR-Claude.md
+FOR-*.md
 plan.md
