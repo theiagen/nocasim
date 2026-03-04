@@ -100,29 +100,40 @@ art_modern --version
 
 ### Docker
 
-```bash
-docker build -t nocasim .
-```
-
-Run with mounted output directory:
+Pre-built images are available from Google Artifact Registry:
 
 ```bash
-docker run --rm -v $(pwd)/results:/output nocasim single \
-  --reference /opt/nocasim/data/references/GII.4.fasta \
-  --ct 28.0 --outdir /output --art-modern art_modern
+docker pull us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.1.0
 ```
 
-For batch mode, mount your sample sheet and references:
+<!-- DOCKER_TAG_VERSION:v0.1.0 -->
+
+Run a single sample:
+
+```bash
+docker run --rm -v $(pwd)/results:/output \
+  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.1.0 single \
+    --reference /opt/nocasim/data/references/GII.4.fasta \
+    --ct 28.0 --outdir /output --art-modern art_modern
+```
+
+Run batch mode with a custom sample sheet:
 
 ```bash
 docker run --rm \
   -v $(pwd)/samples.tsv:/data/samples.tsv \
   -v $(pwd)/results:/output \
-  nocasim simulate \
+  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.1.0 simulate \
     --sample-sheet /data/samples.tsv \
     --references /opt/nocasim/data/references/ \
     --art-modern art_modern \
     --outdir /output
+```
+
+To build locally instead:
+
+```bash
+docker build -t nocasim .
 ```
 
 ## Quick Start
