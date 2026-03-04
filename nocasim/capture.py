@@ -9,8 +9,9 @@ GC_OPT = 0.47
 GC_BIAS_K = 6.0
 
 
-def gc_capture_prob(gc: float, gc_opt: float = GC_OPT,
-                    gc_bias_k: float = GC_BIAS_K) -> float:
+def gc_capture_prob(
+    gc: float, gc_opt: float = GC_OPT, gc_bias_k: float = GC_BIAS_K
+) -> float:
     return math.exp(-gc_bias_k * (gc - gc_opt) ** 2)
 
 

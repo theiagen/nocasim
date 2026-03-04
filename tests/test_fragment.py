@@ -48,7 +48,9 @@ def test_fragment_strands():
     frags = sample_fragments(genome, 1000, config, "viral", 0, genome.length, rng)
     strands = [f.strand for f in frags]
     plus_count = strands.count("+")
-    assert 400 < plus_count < 600, f"Expected ~50/50 strand split, got {plus_count}/1000"
+    assert 400 < plus_count < 600, (
+        f"Expected ~50/50 strand split, got {plus_count}/1000"
+    )
 
 
 def test_fragment_vp1_overlap():

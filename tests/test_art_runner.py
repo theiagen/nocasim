@@ -7,18 +7,32 @@ from nocasim.fragment import Fragment
 
 def test_write_pbsim3_tsv_format(tmp_path):
     frags = [
-        (Fragment(
-            id="frag_0001_viral_0_350_+",
-            sequence="ACGT" * 50,
-            start=0, end=350, strand="+",
-            gc=0.5, source="viral", overlaps_vp1=True,
-        ), 2),
-        (Fragment(
-            id="frag_0002_viral_200_580_-",
-            sequence="TGCA" * 50,
-            start=200, end=580, strand="-",
-            gc=0.5, source="viral", overlaps_vp1=True,
-        ), 1),
+        (
+            Fragment(
+                id="frag_0001_viral_0_350_+",
+                sequence="ACGT" * 50,
+                start=0,
+                end=350,
+                strand="+",
+                gc=0.5,
+                source="viral",
+                overlaps_vp1=True,
+            ),
+            2,
+        ),
+        (
+            Fragment(
+                id="frag_0002_viral_200_580_-",
+                sequence="TGCA" * 50,
+                start=200,
+                end=580,
+                strand="-",
+                gc=0.5,
+                source="viral",
+                overlaps_vp1=True,
+            ),
+            1,
+        ),
     ]
 
     tsv_path = tmp_path / "test.tsv"
@@ -41,12 +55,15 @@ def test_write_pbsim3_tsv_format(tmp_path):
 
 def test_verify_art_modern_not_found():
     import pytest
+
     with pytest.raises(FileNotFoundError):
         verify_art_modern(Path("/nonexistent/art_modern"))
 
 
 @patch("nocasim.art_runner.subprocess.run")
 def test_verify_art_modern_success(mock_run):
-    mock_run.return_value = MagicMock(stdout="art_modern v1.0.0", stderr="", returncode=0)
+    mock_run.return_value = MagicMock(
+        stdout="art_modern v1.0.0", stderr="", returncode=0
+    )
     version = verify_art_modern(Path("/usr/bin/art_modern"))
     assert "art_modern" in version

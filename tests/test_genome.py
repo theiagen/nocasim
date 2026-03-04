@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from nocasim.genome import GenomeRecord, gc_content, load_fasta, reverse_complement, extract_vp1
+from nocasim.genome import (
+    GenomeRecord,
+    gc_content,
+    load_fasta,
+    reverse_complement,
+    extract_vp1,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -27,7 +33,9 @@ def test_reverse_complement():
 
 
 def test_extract_vp1():
-    genome = GenomeRecord(name="test", sequence="A" * 100 + "G" * 50 + "T" * 100, length=250)
+    genome = GenomeRecord(
+        name="test", sequence="A" * 100 + "G" * 50 + "T" * 100, length=250
+    )
     vp1 = extract_vp1(genome, 100, 150)
     assert vp1.sequence == "G" * 50
     assert vp1.length == 50

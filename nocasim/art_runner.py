@@ -9,7 +9,9 @@ def verify_art_modern(bin_path: Path) -> str:
     try:
         result = subprocess.run(
             [str(bin_path), "--version"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         output = result.stdout.strip() or result.stderr.strip()
         if not output:
@@ -42,14 +44,22 @@ def run_art_modern(
     output_prefix = outdir / sample_id
     cmd = [
         str(config.art_modern_bin),
-        "--mode", "template",
-        "--lc", "pe",
-        "--i-file", str(tsv_path),
-        "--i-type", "pbsim3_transcripts",
-        "--i-parser", "stream",
-        "--o-fastq", str(output_prefix),
-        "--builtin_qual_file", "HiSeq2500_150bp",
-        "--read_len", str(config.read_len),
+        "--mode",
+        "template",
+        "--lc",
+        "pe",
+        "--i-file",
+        str(tsv_path),
+        "--i-type",
+        "pbsim3_transcripts",
+        "--i-parser",
+        "stream",
+        "--o-fastq",
+        str(output_prefix),
+        "--builtin_qual_file",
+        "HiSeq2500_150bp",
+        "--read_len",
+        str(config.read_len),
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)

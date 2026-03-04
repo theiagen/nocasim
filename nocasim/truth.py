@@ -107,12 +107,17 @@ def write_summary(all_stats: list[dict], path: Path) -> None:
         return
 
     fieldnames = [
-        "sample_id", "genotype", "ct_value", "vp1_mean_depth",
-        "vp1_completeness_20x", "completeness_call",
+        "sample_id",
+        "genotype",
+        "ct_value",
+        "vp1_mean_depth",
+        "vp1_completeness_20x",
+        "completeness_call",
     ]
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t",
-                                extrasaction="ignore")
+        writer = csv.DictWriter(
+            f, fieldnames=fieldnames, delimiter="\t", extrasaction="ignore"
+        )
         writer.writeheader()
         for stats in all_stats:
             writer.writerow(stats)

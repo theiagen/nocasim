@@ -1,7 +1,8 @@
 import numpy as np
 
 from nocasim.background import (
-    generate_background_fragments, _synthetic_sequence, SAMPLE_TYPE_MIX,
+    generate_background_fragments,
+    _synthetic_sequence,
 )
 from nocasim.config import SimConfig
 from pathlib import Path
@@ -9,7 +10,9 @@ from pathlib import Path
 
 def _config(sample_type: str = "stool") -> SimConfig:
     return SimConfig(
-        references_dir=Path("."), art_modern_bin=Path("."), outdir=Path("."),
+        references_dir=Path("."),
+        art_modern_bin=Path("."),
+        outdir=Path("."),
         sample_type=sample_type,
     )
 

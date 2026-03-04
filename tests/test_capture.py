@@ -8,14 +8,22 @@ from pathlib import Path
 
 def _config() -> SimConfig:
     return SimConfig(
-        references_dir=Path("."), art_modern_bin=Path("."), outdir=Path("."),
+        references_dir=Path("."),
+        art_modern_bin=Path("."),
+        outdir=Path("."),
     )
 
 
 def _frag(overlaps_vp1: bool, gc: float = 0.47, strand: str = "+") -> Fragment:
     return Fragment(
-        id="test_frag", sequence="ACGT" * 50, start=0, end=200,
-        strand=strand, gc=gc, source="viral", overlaps_vp1=overlaps_vp1,
+        id="test_frag",
+        sequence="ACGT" * 50,
+        start=0,
+        end=200,
+        strand=strand,
+        gc=gc,
+        source="viral",
+        overlaps_vp1=overlaps_vp1,
     )
 
 

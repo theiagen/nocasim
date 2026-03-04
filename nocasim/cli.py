@@ -50,19 +50,31 @@ def _simulate_sample(
     vf = ct_to_viral_fraction(ct)
     n_viral = max(int(total_library * vf), 100)
     n_bg = total_library - n_viral
-    click.echo(f"  [{sample_id}] Ct={ct}, viral_fraction={vf:.4f}, "
-               f"n_viral={n_viral}, n_bg={n_bg}")
+    click.echo(
+        f"  [{sample_id}] Ct={ct}, viral_fraction={vf:.4f}, "
+        f"n_viral={n_viral}, n_bg={n_bg}"
+    )
 
     viral_frags = sample_fragments(
-        genome, n_viral, config, "viral", vp1_start, vp1_end, rng,
+        genome,
+        n_viral,
+        config,
+        "viral",
+        vp1_start,
+        vp1_end,
+        rng,
     )
     bg_frags = []
-    for batch in generate_background_fragments(n_bg, config, human_ref, microbiome_ref, rng, wastewater_ref):
+    for batch in generate_background_fragments(
+        n_bg, config, human_ref, microbiome_ref, rng, wastewater_ref
+    ):
         bg_frags.extend(batch)
 
     on_target, off_target = run_capture(viral_frags, bg_frags, config, rng)
-    click.echo(f"  [{sample_id}] Captured: {len(on_target)} on-target, "
-               f"{len(off_target)} off-target")
+    click.echo(
+        f"  [{sample_id}] Captured: {len(on_target)} on-target, "
+        f"{len(off_target)} off-target"
+    )
 
     on_copies = assign_copy_counts(on_target, config.dup_rate, rng)
     off_copies = assign_copy_counts(off_target, config.dup_rate, rng)
@@ -71,8 +83,11 @@ def _simulate_sample(
     if not all_copies:
         click.echo(f"  [{sample_id}] WARNING: no fragments after capture")
         return {
-            "sample_id": sample_id, "genotype": genotype, "ct_value": ct,
-            "vp1_mean_depth": 0.0, "vp1_completeness_20x": 0.0,
+            "sample_id": sample_id,
+            "genotype": genotype,
+            "ct_value": ct,
+            "vp1_mean_depth": 0.0,
+            "vp1_completeness_20x": 0.0,
             "completeness_call": "incomplete",
         }
 
@@ -87,7 +102,9 @@ def _simulate_sample(
     total_off = sum(c for _, c in off_copies)
     total_reads = total_on + total_off
     achieved_on_target = total_on / total_reads if total_reads > 0 else 0.0
-    achieved_dup = 1.0 - len(all_copies) / sum(c for _, c in all_copies) if all_copies else 0.0
+    achieved_dup = (
+        1.0 - len(all_copies) / sum(c for _, c in all_copies) if all_copies else 0.0
+    )
     frag_lengths = [f.end - f.start for f, _ in all_copies]
     mean_frag = sum(frag_lengths) / len(frag_lengths) if frag_lengths else 0.0
 
@@ -110,8 +127,10 @@ def _simulate_sample(
     }
 
     organise_outputs(sample_id, art_prefix, stats, config.outdir)
-    click.echo(f"  [{sample_id}] depth={stats['vp1_mean_depth']}, "
-               f"call={stats['completeness_call']}")
+    click.echo(
+        f"  [{sample_id}] depth={stats['vp1_mean_depth']}, "
+        f"call={stats['completeness_call']}"
+    )
 
     if not keep_intermediates and tsv_path.exists():
         tsv_path.unlink()
@@ -120,16 +139,26 @@ def _simulate_sample(
 
 
 @main.command()
-@click.option("--sample-sheet", required=True,
-              type=click.Path(exists=True, path_type=Path))
-@click.option("--references", required=True,
-              type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--sample-sheet", required=True, type=click.Path(exists=True, path_type=Path)
+)
+@click.option(
+    "--references", required=True, type=click.Path(exists=True, path_type=Path)
+)
 @click.option("--probes", type=click.Path(exists=True, path_type=Path), default=None)
 @click.option("--human-bg", type=click.Path(exists=True, path_type=Path), default=None)
-@click.option("--microbiome-bg", type=click.Path(exists=True, path_type=Path), default=None)
-@click.option("--wastewater-bg", type=click.Path(exists=True, path_type=Path), default=None)
-@click.option("--sample-type", default="stool", type=click.Choice(["stool", "wastewater"]),
-              help="Sample type controls background composition mix")
+@click.option(
+    "--microbiome-bg", type=click.Path(exists=True, path_type=Path), default=None
+)
+@click.option(
+    "--wastewater-bg", type=click.Path(exists=True, path_type=Path), default=None
+)
+@click.option(
+    "--sample-type",
+    default="stool",
+    type=click.Choice(["stool", "wastewater"]),
+    help="Sample type controls background composition mix",
+)
 @click.option("--art-modern", required=True, type=click.Path(path_type=Path))
 @click.option("--read-len", default=150, type=int)
 @click.option("--dup-rate", default=0.40, type=float)
@@ -137,11 +166,29 @@ def _simulate_sample(
 @click.option("--outdir", required=True, type=click.Path(path_type=Path))
 @click.option("--seed", default=42, type=int)
 @click.option("--keep-intermediates", is_flag=True, default=False)
-@click.option("--total-fragments", default=500_000, type=int,
-              help="Total pre-capture library size per sample")
-def simulate(sample_sheet, references, probes, human_bg, microbiome_bg,
-             wastewater_bg, sample_type, art_modern, read_len, dup_rate,
-             off_target, outdir, seed, keep_intermediates, total_fragments):
+@click.option(
+    "--total-fragments",
+    default=500_000,
+    type=int,
+    help="Total pre-capture library size per sample",
+)
+def simulate(
+    sample_sheet,
+    references,
+    probes,
+    human_bg,
+    microbiome_bg,
+    wastewater_bg,
+    sample_type,
+    art_modern,
+    read_len,
+    dup_rate,
+    off_target,
+    outdir,
+    seed,
+    keep_intermediates,
+    total_fragments,
+):
     """Simulate a batch of samples from a sample sheet."""
     config = SimConfig(
         references_dir=references,
@@ -181,11 +228,13 @@ def simulate(sample_sheet, references, probes, human_bg, microbiome_bg,
     with open(sample_sheet) as f:
         reader = csv.DictReader(f, delimiter="\t")
         for row in reader:
-            samples.append({
-                "sample_id": row["sample_id"],
-                "genotype": row["genotype"],
-                "ct_value": float(row["ct_value"]),
-            })
+            samples.append(
+                {
+                    "sample_id": row["sample_id"],
+                    "genotype": row["genotype"],
+                    "ct_value": float(row["ct_value"]),
+                }
+            )
 
     click.echo(f"Loaded {len(samples)} samples, {len(genome_records)} references")
     outdir.mkdir(parents=True, exist_ok=True)
@@ -217,7 +266,9 @@ def simulate(sample_sheet, references, probes, human_bg, microbiome_bg,
 
 
 @main.command()
-@click.option("--reference", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--reference", required=True, type=click.Path(exists=True, path_type=Path)
+)
 @click.option("--ct", required=True, type=float)
 @click.option("--outdir", required=True, type=click.Path(path_type=Path))
 @click.option("--art-modern", required=True, type=click.Path(path_type=Path))
@@ -225,10 +276,15 @@ def simulate(sample_sheet, references, probes, human_bg, microbiome_bg,
 @click.option("--dup-rate", default=0.40, type=float)
 @click.option("--off-target", default=0.592, type=float)
 @click.option("--seed", default=42, type=int)
-@click.option("--n-fragments", default=10_000, type=int,
-              help="Number of viral fragments to generate")
-def single(reference, ct, outdir, art_modern, read_len, dup_rate, off_target,
-           seed, n_fragments):
+@click.option(
+    "--n-fragments",
+    default=10_000,
+    type=int,
+    help="Number of viral fragments to generate",
+)
+def single(
+    reference, ct, outdir, art_modern, read_len, dup_rate, off_target, seed, n_fragments
+):
     """Simulate a single sample for testing."""
     config = SimConfig(
         references_dir=reference.parent,
@@ -253,7 +309,13 @@ def single(reference, ct, outdir, art_modern, read_len, dup_rate, off_target,
     vp1_end = config.vp1_end if genome.length > config.vp1_end else genome.length
 
     viral_frags = sample_fragments(
-        genome, n_fragments, config, "viral", vp1_start, vp1_end, rng,
+        genome,
+        n_fragments,
+        config,
+        "viral",
+        vp1_start,
+        vp1_end,
+        rng,
     )
     click.echo(f"Sampled {len(viral_frags)} viral fragments")
 
@@ -271,7 +333,9 @@ def single(reference, ct, outdir, art_modern, read_len, dup_rate, off_target,
         art_prefix = run_art_modern(tsv_path, sample_id, Path(tmpdir), config)
 
         coverage = compute_vp1_coverage_from_fragments(
-            on_copies, vp1_start, vp1_end,
+            on_copies,
+            vp1_start,
+            vp1_end,
         )
 
         manifest = {
@@ -295,9 +359,11 @@ def download_probes(outdir):
     import urllib.request
 
     outdir.mkdir(parents=True, exist_ok=True)
-    url = ("https://static-content.springer.com/esm/"
-           "art%3A10.1038%2Fs41598-025-03398-6/MediaObjects/"
-           "41598_2025_3398_MOESM2_ESM.txt")
+    url = (
+        "https://static-content.springer.com/esm/"
+        "art%3A10.1038%2Fs41598-025-03398-6/MediaObjects/"
+        "41598_2025_3398_MOESM2_ESM.txt"
+    )
     dest = outdir / "hunov_probes.txt"
 
     click.echo(f"Downloading probes from {url}")

@@ -8,7 +8,9 @@ def _write_sam(path: Path, reads: list[tuple[int, str]]) -> None:
         f.write("@HD\tVN:1.6\n")
         f.write("@SQ\tSN:ref\tLN:2000\n")
         for i, (pos, seq) in enumerate(reads):
-            f.write(f"read_{i}\t0\tref\t{pos}\t60\t{len(seq)}M\t*\t0\t0\t{seq}\t{'I'*len(seq)}\n")
+            f.write(
+                f"read_{i}\t0\tref\t{pos}\t60\t{len(seq)}M\t*\t0\t0\t{seq}\t{'I' * len(seq)}\n"
+            )
 
 
 def test_compute_vp1_coverage_basic(tmp_path):
@@ -39,18 +41,29 @@ def test_write_manifest(tmp_path):
     path = tmp_path / "manifest.json"
     write_manifest(stats, path)
     import json
+
     data = json.loads(path.read_text())
     assert data["sample_id"] == "s1"
 
 
 def test_write_summary(tmp_path):
     stats_list = [
-        {"sample_id": "s1", "genotype": "GII.4", "ct_value": 25.0,
-         "vp1_mean_depth": 100.0, "vp1_completeness_20x": 0.95,
-         "completeness_call": "complete"},
-        {"sample_id": "s2", "genotype": "GI.1", "ct_value": 35.0,
-         "vp1_mean_depth": 5.0, "vp1_completeness_20x": 0.30,
-         "completeness_call": "incomplete"},
+        {
+            "sample_id": "s1",
+            "genotype": "GII.4",
+            "ct_value": 25.0,
+            "vp1_mean_depth": 100.0,
+            "vp1_completeness_20x": 0.95,
+            "completeness_call": "complete",
+        },
+        {
+            "sample_id": "s2",
+            "genotype": "GI.1",
+            "ct_value": 35.0,
+            "vp1_mean_depth": 5.0,
+            "vp1_completeness_20x": 0.30,
+            "completeness_call": "incomplete",
+        },
     ]
     path = tmp_path / "summary.tsv"
     write_summary(stats_list, path)

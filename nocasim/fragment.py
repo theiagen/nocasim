@@ -24,7 +24,9 @@ def _truncnorm_rvs(
 ) -> np.ndarray:
     a = (low - mean) / sd
     b = (high - mean) / sd
-    return truncnorm.rvs(a, b, loc=mean, scale=sd, size=size, random_state=rng).astype(int)
+    return truncnorm.rvs(a, b, loc=mean, scale=sd, size=size, random_state=rng).astype(
+        int
+    )
 
 
 def sample_fragments(
@@ -40,11 +42,16 @@ def sample_fragments(
         return []
 
     lengths = _truncnorm_rvs(
-        config.fragment_mean, config.fragment_sd,
-        config.fragment_min, config.fragment_max,
-        size=n, rng=rng,
+        config.fragment_mean,
+        config.fragment_sd,
+        config.fragment_min,
+        config.fragment_max,
+        size=n,
+        rng=rng,
     )
-    lengths = np.clip(lengths, config.fragment_min, min(config.fragment_max, genome.length))
+    lengths = np.clip(
+        lengths, config.fragment_min, min(config.fragment_max, genome.length)
+    )
 
     max_starts = genome.length - lengths
     max_starts = np.maximum(max_starts, 0)

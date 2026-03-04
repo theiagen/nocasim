@@ -20,19 +20,23 @@ SAMPLE_TYPE_MIX = {
 }
 
 
-def _synthetic_sequence(length: int, gc_target: float,
-                        rng: np.random.Generator) -> str:
+def _synthetic_sequence(length: int, gc_target: float, rng: np.random.Generator) -> str:
     gc_target = max(0.01, min(0.99, gc_target))
     n_gc = int(length * gc_target)
     n_at = length - n_gc
-    bases = (["G"] * (n_gc // 2) + ["C"] * (n_gc - n_gc // 2) +
-             ["A"] * (n_at // 2) + ["T"] * (n_at - n_at // 2))
+    bases = (
+        ["G"] * (n_gc // 2)
+        + ["C"] * (n_gc - n_gc // 2)
+        + ["A"] * (n_at // 2)
+        + ["T"] * (n_at - n_at // 2)
+    )
     rng.shuffle(bases)
     return "".join(bases)
 
 
-def _sample_gc(n: int, gc_mean: float, gc_sd: float,
-               rng: np.random.Generator) -> np.ndarray:
+def _sample_gc(
+    n: int, gc_mean: float, gc_sd: float, rng: np.random.Generator
+) -> np.ndarray:
     gc_values = rng.normal(gc_mean, gc_sd, size=n)
     return np.clip(gc_values, 0.30, 0.70)
 
@@ -51,17 +55,32 @@ def generate_background_fragments(
     n_microbiome = n - n_human - n_wastewater
 
     yield from _generate_source_fragments(
-        n_human, "human_bg", human_ref,
-        HUMAN_GC_MEAN, HUMAN_GC_SD, config, rng,
+        n_human,
+        "human_bg",
+        human_ref,
+        HUMAN_GC_MEAN,
+        HUMAN_GC_SD,
+        config,
+        rng,
     )
     yield from _generate_source_fragments(
-        n_microbiome, "microbiome_bg", microbiome_ref,
-        MICROBIOME_GC_MEAN, MICROBIOME_GC_SD, config, rng,
+        n_microbiome,
+        "microbiome_bg",
+        microbiome_ref,
+        MICROBIOME_GC_MEAN,
+        MICROBIOME_GC_SD,
+        config,
+        rng,
     )
     if n_wastewater > 0:
         yield from _generate_source_fragments(
-            n_wastewater, "wastewater_bg", wastewater_ref,
-            WASTEWATER_GC_MEAN, WASTEWATER_GC_SD, config, rng,
+            n_wastewater,
+            "wastewater_bg",
+            wastewater_ref,
+            WASTEWATER_GC_MEAN,
+            WASTEWATER_GC_SD,
+            config,
+            rng,
         )
 
 
@@ -83,17 +102,27 @@ def _generate_source_fragments(
             chosen_name = rng.choice(ref_names)
             genome = ref[chosen_name]
             batch = sample_fragments(
-                genome, batch_n, config, source,
-                vp1_start=-1, vp1_end=-1, rng=rng,
+                genome,
+                batch_n,
+                config,
+                source,
+                vp1_start=-1,
+                vp1_end=-1,
+                rng=rng,
             )
         else:
             gc_values = _sample_gc(batch_n, gc_mean, gc_sd, rng)
             from scipy.stats import truncnorm
+
             a = (config.fragment_min - config.fragment_mean) / config.fragment_sd
             b = (config.fragment_max - config.fragment_mean) / config.fragment_sd
             lengths = truncnorm.rvs(
-                a, b, loc=config.fragment_mean, scale=config.fragment_sd,
-                size=batch_n, random_state=rng,
+                a,
+                b,
+                loc=config.fragment_mean,
+                scale=config.fragment_sd,
+                size=batch_n,
+                random_state=rng,
             ).astype(int)
 
             batch = []
