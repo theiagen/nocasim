@@ -63,23 +63,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update README with new tag
+      - name: Update version references
         env:
           NEW_TAG: ${{ steps.version.outputs.tag }}
         run: |
+          VERSION="${NEW_TAG#v}"
           sed -i "s|nocasim:[v0-9.]*|nocasim:${NEW_TAG}|g" README.md
           sed -i "s|DOCKER_TAG_VERSION:[v0-9.]*|DOCKER_TAG_VERSION:${NEW_TAG}|g" README.md
+          sed -i "s|^version = \".*\"|version = \"${VERSION}\"|" pyproject.toml
 
-      - name: Commit and push README
+      - name: Commit and push version bump
         env:
           NEW_TAG: ${{ steps.version.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
+          git add README.md pyproject.toml
           if git diff --cached --quiet; then
-            echo "No changes to README"
+            echo "No changes to commit"
           else
-            git commit -m "docs: update Docker image tag to ${NEW_TAG}"
+            git commit -m "chore: bump version to ${NEW_TAG}"
             git push origin main
           fi

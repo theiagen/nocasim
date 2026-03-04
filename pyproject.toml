@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nocasim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Norovirus Capture Sequencing Simulator"
 requires-python = ">=3.11"
 dependencies = [
