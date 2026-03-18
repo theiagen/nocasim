@@ -13,8 +13,18 @@ from nocasim.ct_model import ct_to_viral_fraction
 from nocasim.duplicate import assign_copy_counts
 from nocasim.fragment import sample_fragments
 from nocasim.genome import load_fasta
+from nocasim.mixture import (
+    PRESETS,
+    MixtureSpec,
+    generate_mixture_fragments,
+    resolve_mixture,
+)
 from nocasim.output import organise_outputs
-from nocasim.truth import compute_vp1_coverage_from_fragments, write_summary
+from nocasim.truth import (
+    compute_mixture_coverage,
+    compute_vp1_coverage_from_fragments,
+    write_summary,
+)
 
 
 @click.group()
@@ -24,7 +34,7 @@ def main():
 
 def _simulate_sample(
     sample_id: str,
-    genotype: str,
+    mixture: MixtureSpec,
     ct: float,
     genome_records: dict,
     config: SimConfig,
@@ -36,16 +46,7 @@ def _simulate_sample(
     microbiome_ref: dict | None = None,
     wastewater_ref: dict | None = None,
 ) -> dict:
-    if genotype not in genome_records:
-        raise click.ClickException(
-            f"Genotype '{genotype}' not found in references. "
-            f"Available: {list(genome_records.keys())}"
-        )
-    genome = genome_records[genotype]
-
-    vp1_start = config.vp1_start if genome.length > config.vp1_end else 0
-    vp1_end = config.vp1_end if genome.length > config.vp1_end else genome.length
-    vp1_length = vp1_end - vp1_start
+    genotype_str = mixture.to_spec_string()
 
     vf = ct_to_viral_fraction(ct)
     n_viral = max(int(total_library * vf), 100)
@@ -55,15 +56,14 @@ def _simulate_sample(
         f"n_viral={n_viral}, n_bg={n_bg}"
     )
 
-    viral_frags = sample_fragments(
-        genome,
-        n_viral,
-        config,
-        "viral",
-        vp1_start,
-        vp1_end,
-        rng,
+    lineage_data = generate_mixture_fragments(
+        mixture, n_viral, genome_records, config, rng
     )
+
+    viral_frags = []
+    for _genotype, (_vs, _ve, frags) in lineage_data.items():
+        viral_frags.extend(frags)
+
     bg_frags = []
     for batch in generate_background_fragments(
         n_bg, config, human_ref, microbiome_ref, rng, wastewater_ref
@@ -84,11 +84,12 @@ def _simulate_sample(
         click.echo(f"  [{sample_id}] WARNING: no fragments after capture")
         return {
             "sample_id": sample_id,
-            "genotype": genotype,
+            "genotype": genotype_str,
             "ct_value": ct,
             "vp1_mean_depth": 0.0,
             "vp1_completeness_20x": 0.0,
             "completeness_call": "incomplete",
+            "lineage_detail": "",
         }
 
     tsv_path = tmpdir / f"{sample_id}_fragments.tsv"
@@ -96,7 +97,23 @@ def _simulate_sample(
 
     art_prefix = run_art_modern(tsv_path, sample_id, tmpdir, config)
 
-    coverage = compute_vp1_coverage_from_fragments(on_copies, vp1_start, vp1_end)
+    abundances = {lineage.genotype: lineage.abundance for lineage in mixture.lineages}
+    lineage_on_copies = {
+        g: (vs, ve, [(f, c) for f, c in on_copies if f.source == g])
+        for g, (vs, ve, _) in lineage_data.items()
+    }
+    mix_coverage = compute_mixture_coverage(lineage_on_copies, abundances)
+    coverage = mix_coverage["aggregate"]
+
+    if len(lineage_data) > 1:
+        detail_parts = []
+        for g, lstats in mix_coverage["per_lineage"].items():
+            detail_parts.append(
+                f"{g}:{lstats['vp1_mean_depth']}x/{lstats['vp1_completeness_20x']}"
+            )
+        lineage_detail = ";".join(detail_parts)
+    else:
+        lineage_detail = ""
 
     total_on = sum(c for _, c in on_copies)
     total_off = sum(c for _, c in off_copies)
@@ -110,11 +127,11 @@ def _simulate_sample(
 
     stats = {
         "sample_id": sample_id,
-        "genotype": genotype,
+        "genotype": genotype_str,
         "ct_value": ct,
         "seed": config.seed,
         "viral_fraction_input": round(vf, 4),
-        "vp1_length_bp": coverage.get("vp1_length_bp", vp1_length),
+        "vp1_length_bp": coverage.get("vp1_length_bp", 0),
         "total_read_pairs": total_reads,
         "on_target_read_pairs": total_on,
         "off_target_read_pairs": total_off,
@@ -124,9 +141,26 @@ def _simulate_sample(
         "completeness_call": coverage.get("completeness_call", "incomplete"),
         "duplicate_rate_achieved": round(achieved_dup, 3),
         "fragment_mean_achieved": round(mean_frag, 1),
+        "lineage_detail": lineage_detail,
     }
 
-    organise_outputs(sample_id, art_prefix, stats, config.outdir)
+    manifest = dict(stats)
+    if len(mixture.lineages) > 1:
+        manifest["mixture"] = [
+            {"genotype": lineage.genotype, "abundance": lineage.abundance}
+            for lineage in mixture.lineages
+        ]
+        manifest["per_lineage"] = {
+            g: {
+                "abundance": abundances[g],
+                "n_fragments": len(lineage_data[g][2]),
+                **lstats,
+            }
+            for g, lstats in mix_coverage["per_lineage"].items()
+        }
+        manifest["aggregate"] = coverage
+
+    organise_outputs(sample_id, art_prefix, manifest, config.outdir)
     click.echo(
         f"  [{sample_id}] depth={stats['vp1_mean_depth']}, "
         f"call={stats['completeness_call']}"
@@ -172,6 +206,19 @@ def _simulate_sample(
     type=int,
     help="Total pre-capture library size per sample",
 )
+@click.option(
+    "--mixture",
+    "mixture_spec",
+    default=None,
+    type=str,
+    help='Mixture spec for all samples, e.g. "GII.17:0.75,GII.4:0.25"',
+)
+@click.option(
+    "--preset",
+    default=None,
+    type=click.Choice(list(PRESETS.keys())),
+    help="Built-in mixture preset name",
+)
 def simulate(
     sample_sheet,
     references,
@@ -188,6 +235,8 @@ def simulate(
     seed,
     keep_intermediates,
     total_fragments,
+    mixture_spec,
+    preset,
 ):
     """Simulate a batch of samples from a sample sheet."""
     config = SimConfig(
@@ -204,6 +253,9 @@ def simulate(
         off_target_rate=off_target,
         seed=seed,
     )
+
+    if mixture_spec and preset:
+        raise click.ClickException("--mixture and --preset are mutually exclusive")
 
     version = verify_art_modern(config.art_modern_bin)
     click.echo(f"art_modern version: {version}")
@@ -239,14 +291,25 @@ def simulate(
     click.echo(f"Loaded {len(samples)} samples, {len(genome_records)} references")
     outdir.mkdir(parents=True, exist_ok=True)
 
+    for sample in samples:
+        mix = resolve_mixture(sample["genotype"], mixture_spec, preset)
+        for lineage in mix.lineages:
+            if lineage.genotype not in genome_records:
+                raise click.ClickException(
+                    f"Genotype '{lineage.genotype}' (sample {sample['sample_id']}) "
+                    f"not found in references. "
+                    f"Available: {sorted(genome_records.keys())}"
+                )
+
     rng = np.random.default_rng(seed)
     all_stats = []
 
     with tempfile.TemporaryDirectory() as tmpdir:
         for sample in samples:
+            mix = resolve_mixture(sample["genotype"], mixture_spec, preset)
             stats = _simulate_sample(
                 sample_id=sample["sample_id"],
-                genotype=sample["genotype"],
+                mixture=mix,
                 ct=sample["ct_value"],
                 genome_records=genome_records,
                 config=config,
