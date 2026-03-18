@@ -103,16 +103,16 @@ art_modern --version
 Pre-built images are available from Google Artifact Registry:
 
 ```bash
-docker pull us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.2.0
+docker pull us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.3.0
 ```
 
-<!-- DOCKER_TAG_VERSION:v0.2.0 -->
+<!-- DOCKER_TAG_VERSION:v0.3.0 -->
 
 Run a single sample:
 
 ```bash
 docker run --rm -v $(pwd)/results:/output \
-  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.2.0 single \
+  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.3.0 single \
     --reference /opt/nocasim/data/references/GII.4.fasta \
     --ct 28.0 --outdir /output --art-modern art_modern
 ```
@@ -123,7 +123,7 @@ Run batch mode with a custom sample sheet:
 docker run --rm \
   -v $(pwd)/samples.tsv:/data/samples.tsv \
   -v $(pwd)/results:/output \
-  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.2.0 simulate \
+  us-docker.pkg.dev/general-theiagen/theiagen/nocasim:v0.3.0 simulate \
     --sample-sheet /data/samples.tsv \
     --references /opt/nocasim/data/references/ \
     --art-modern art_modern \
