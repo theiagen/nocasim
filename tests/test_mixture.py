@@ -1,13 +1,35 @@
+from pathlib import Path
+
+import numpy as np
 import pytest
 
+from nocasim.config import SimConfig
+from nocasim.genome import load_fasta
 from nocasim.mixture import (
     LineageSpec,
     MixtureSpec,
+    generate_mixture_fragments,
     parse_mixture,
     resolve_mixture,
     resolve_preset,
     PRESETS,
 )
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _make_config() -> SimConfig:
+    return SimConfig(
+        references_dir=FIXTURES,
+        art_modern_bin=Path("/usr/bin/false"),
+        outdir=Path("/tmp/test_out"),
+    )
+
+
+def _make_genome_records() -> dict:
+    records = load_fasta(FIXTURES / "test_reference.fasta")
+    genome = next(iter(records.values()))
+    return {"GII.4": genome, "GII.17": genome}
 
 
 def test_parse_bare_genotype():
@@ -104,3 +126,84 @@ def test_resolve_mixture_bare_genotype():
         cli_preset=None,
     )
     assert result == MixtureSpec(lineages=[LineageSpec("GII.4", 1.0)])
+
+
+def test_generate_splits_proportionally():
+    config = _make_config()
+    genomes = _make_genome_records()
+    rng = np.random.default_rng(42)
+    mixture = MixtureSpec(
+        lineages=[
+            LineageSpec("GII.4", 0.7),
+            LineageSpec("GII.17", 0.3),
+        ]
+    )
+
+    result = generate_mixture_fragments(mixture, 1000, genomes, config, rng)
+    assert "GII.4" in result
+    assert "GII.17" in result
+    n_gii4 = len(result["GII.4"][2])
+    n_gii17 = len(result["GII.17"][2])
+    assert n_gii4 + n_gii17 == 1000
+    assert n_gii4 == 700
+    assert n_gii17 == 300
+
+
+def test_generate_single_lineage():
+    config = _make_config()
+    genomes = _make_genome_records()
+    rng = np.random.default_rng(42)
+    mixture = MixtureSpec(lineages=[LineageSpec("GII.4", 1.0)])
+
+    result = generate_mixture_fragments(mixture, 500, genomes, config, rng)
+    assert len(result) == 1
+    assert len(result["GII.4"][2]) == 500
+
+
+def test_generate_tiny_abundance_skipped():
+    config = _make_config()
+    genomes = _make_genome_records()
+    rng = np.random.default_rng(42)
+    mixture = MixtureSpec(
+        lineages=[
+            LineageSpec("GII.4", 0.999),
+            LineageSpec("GII.17", 0.001),
+        ]
+    )
+
+    result = generate_mixture_fragments(mixture, 100, genomes, config, rng)
+    assert "GII.4" in result
+    # GII.17 gets 0 fragments, should be skipped
+    if "GII.17" in result:
+        assert len(result["GII.17"][2]) == 0
+
+
+def test_generate_returns_vp1_coords():
+    config = _make_config()
+    genomes = _make_genome_records()
+    rng = np.random.default_rng(42)
+    mixture = MixtureSpec(lineages=[LineageSpec("GII.4", 1.0)])
+
+    result = generate_mixture_fragments(mixture, 100, genomes, config, rng)
+    vp1_start, vp1_end, frags = result["GII.4"]
+    assert isinstance(vp1_start, int)
+    assert isinstance(vp1_end, int)
+    assert vp1_start < vp1_end
+
+
+def test_generate_fragment_source_is_genotype():
+    config = _make_config()
+    genomes = _make_genome_records()
+    rng = np.random.default_rng(42)
+    mixture = MixtureSpec(
+        lineages=[
+            LineageSpec("GII.4", 0.5),
+            LineageSpec("GII.17", 0.5),
+        ]
+    )
+
+    result = generate_mixture_fragments(mixture, 100, genomes, config, rng)
+    for frag in result["GII.4"][2]:
+        assert frag.source == "GII.4"
+    for frag in result["GII.17"][2]:
+        assert frag.source == "GII.17"
