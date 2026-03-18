@@ -97,6 +97,52 @@ def compute_vp1_coverage(sam_path: Path, vp1_start: int, vp1_end: int) -> dict:
     }
 
 
+def compute_mixture_coverage(
+    lineage_data: dict[str, tuple[int, int, list[tuple[Fragment, int]]]],
+    abundances: dict[str, float],
+) -> dict:
+    per_lineage = {}
+    for genotype, (vp1_start, vp1_end, frags) in lineage_data.items():
+        per_lineage[genotype] = compute_vp1_coverage_from_fragments(
+            frags, vp1_start, vp1_end
+        )
+
+    aggregate = _aggregate_lineage_stats(per_lineage, abundances)
+    return {"aggregate": aggregate, "per_lineage": per_lineage}
+
+
+def _aggregate_lineage_stats(
+    per_lineage: dict[str, dict],
+    abundances: dict[str, float],
+) -> dict:
+    if len(per_lineage) == 1:
+        return dict(next(iter(per_lineage.values())))
+
+    mean_depth = sum(
+        s["vp1_mean_depth"] * abundances[g] for g, s in per_lineage.items()
+    )
+    completeness = sum(
+        s["vp1_completeness_20x"] * abundances[g] for g, s in per_lineage.items()
+    )
+    breadth = sum(s["vp1_breadth"] * abundances[g] for g, s in per_lineage.items())
+    vp1_length = max(s["vp1_length_bp"] for s in per_lineage.values())
+
+    if completeness >= 0.90:
+        call = "complete"
+    elif breadth >= 0.90:
+        call = "low_coverage"
+    else:
+        call = "incomplete"
+
+    return {
+        "vp1_length_bp": vp1_length,
+        "vp1_mean_depth": round(mean_depth, 1),
+        "vp1_completeness_20x": round(completeness, 3),
+        "vp1_breadth": round(breadth, 3),
+        "completeness_call": call,
+    }
+
+
 def write_manifest(stats: dict, path: Path) -> None:
     with open(path, "w") as f:
         json.dump(stats, f, indent=2)
@@ -113,6 +159,7 @@ def write_summary(all_stats: list[dict], path: Path) -> None:
         "vp1_mean_depth",
         "vp1_completeness_20x",
         "completeness_call",
+        "lineage_detail",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(
