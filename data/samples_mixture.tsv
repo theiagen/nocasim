@@ -1,0 +1,6 @@
+sample_id	genotype	ct_value
+ww_001	GII.17:0.75,GII.4:0.15,GI.1:0.10	24.5
+ww_002	GII.17:0.75,GII.4:0.15,GI.1:0.10	28.0
+ww_003	GII.17:0.75,GII.4:0.15,GI.1:0.10	32.5
+ww_004	GII.4	25.0
+ww_005	GII.17	30.0
