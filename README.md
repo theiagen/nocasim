@@ -186,6 +186,39 @@ nocasim simulate \
   --outdir results/
 ```
 
+### Mixture presets
+
+Built-in presets simulate realistic wastewater genotype distributions:
+
+```bash
+nocasim simulate \
+  --sample-sheet samples.tsv \
+  --references data/references/ \
+  --art-modern art_modern \
+  --preset us-2024 \
+  --outdir results/
+```
+
+| Preset | Composition | Source |
+|--------|-------------|--------|
+| `us-2024` | GII.17:0.75, GII.4:0.11, GII.2:0.05, GI.1:0.04, GII.6:0.03, GI.3:0.02 | CaliciNet 2024-25 (PMC12205451) |
+| `diverse` | GII.17:0.25, GII.4:0.20, GII.2:0.15, GI.1:0.15, GII.6:0.13, GI.7:0.12 | Synthetic high-diversity |
+| `gi-dominant` | GI.1:0.40, GI.3:0.25, GI.7:0.20, GII.17:0.15 | Synthetic GI-heavy |
+| `outbreak` | GII.17:0.90, GII.4:0.10 | Single-genotype emergence |
+
+For custom mixtures, use `--mixture` instead:
+
+```bash
+nocasim simulate \
+  --sample-sheet samples.tsv \
+  --references data/references/ \
+  --art-modern art_modern \
+  --mixture "GII.17:0.60,GII.4:0.25,GI.1:0.15" \
+  --outdir results/
+```
+
+`--mixture` and `--preset` are mutually exclusive.
+
 ### Fetch probe sequences from the paper
 
 ```bash
@@ -204,15 +237,32 @@ sample_id    genotype    ct_value
 sample_001   GII.4       24.5
 sample_002   GII.17      30.0
 sample_003   GI.1        31.7
-sample_004   GII.2       26.0
-sample_005   GII.4       35.2
 ```
 
 The `genotype` value must match the filename stem of a FASTA file in the
 `--references` directory. For example, `GII.4` maps to
 `data/references/GII.4.fasta`.
 
-An example sample sheet is included at `data/samples.tsv`.
+### Multi-lineage mixtures
+
+The `genotype` column also accepts comma-separated mixture specs for
+simulating wastewater samples with multiple co-circulating lineages:
+
+```
+sample_id    genotype                              ct_value
+ww_001       GII.17:0.75,GII.4:0.15,GI.1:0.10    24.5
+ww_002       GII.4                                 28.0
+```
+
+Proportions must sum to 1.0. Samples with a bare genotype name are treated
+as single-lineage (equivalent to `GII.4:1.0`).
+
+Alternatively, use `--preset` or `--mixture` CLI flags to apply a mixture
+to all samples at once (see [Mixture presets](#mixture-presets) below).
+Per-sample mixture syntax in the TSV overrides CLI flags.
+
+Example sample sheets are included at `data/samples.tsv` (single-lineage)
+and `data/samples_mixture.tsv` (multi-lineage).
 
 ## Reference Files
 
@@ -249,11 +299,16 @@ results/
 ```
 
 `summary.tsv` contains one row per sample with columns: `sample_id`,
-`genotype`, `ct_value`, `vp1_depth`, `vp1_completeness_20x`,
-`completeness_call`.
+`genotype`, `ct_value`, `vp1_mean_depth`, `vp1_completeness_20x`,
+`completeness_call`, `lineage_detail`. For multi-lineage samples,
+`lineage_detail` contains per-lineage stats in the format
+`GII.17:67.1x/0.94;GII.4:13.4x/0.82` (depth/completeness per genotype).
 
 `sample_001_manifest.json` contains per-sample ground truth metrics including
 achieved on-target rate, duplicate rate, mean VP1 depth, and completeness call.
+For multi-lineage samples, the manifest also includes `mixture` (input
+proportions), `per_lineage` (per-genotype coverage stats), and `aggregate`
+(weighted overall stats).
 
 Completeness calls follow the paper's criteria:
 - `complete`: >= 20x coverage across >= 90% of VP1
@@ -269,6 +324,8 @@ Completeness calls follow the paper's criteria:
 | `--off-target` | 0.592 | 1 - 0.408 on-target rate (Table 1) |
 | `--total-fragments` | 500000 | Pre-capture library size |
 | `--sample-type` | stool | Background composition model (`stool` or `wastewater`) |
+| `--preset` | — | Built-in mixture preset (`us-2024`, `diverse`, `gi-dominant`, `outbreak`) |
+| `--mixture` | — | Custom mixture spec, e.g. `"GII.17:0.75,GII.4:0.25"` |
 | `--seed` | 42 | RNG seed for reproducibility |
 
 ### Background composition by sample type
@@ -297,6 +354,7 @@ pytest tests/ -v
 ## What This Simulator Does Not Model
 
 - ORF1 / polymerase region (recombination makes it irrelevant for genotyping)
-- Intra-host variant frequencies or quasispecies dynamics
+- Intra-lineage quasispecies diversity or SNV simulation
+- Recombinant genomes (chimeric ORF1/ORF2 junctions)
 - RNA extraction efficiency
 - Reverse transcription efficiency
